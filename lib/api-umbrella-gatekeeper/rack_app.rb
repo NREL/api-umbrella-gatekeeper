@@ -4,6 +4,14 @@ module ApiUmbrella
       def self.instance
         @@instance ||= ::Rack::Builder.app do
           use ApiUmbrella::Gatekeeper::Rack::FormattedErrorResponse
+          use ::Rack::OAuth2::Server::Resource::Bearer, "Something" do |req|
+            ApiUser.active.where(:api_key => req.access_token).first || req.invalid_token!
+          end
+          use ::Rack::OAuth2::Server::Resource::MAC, 'Rack::OAuth2 Sample Protected Resources' do |req|
+            user = ApiUser.active.where(:api_key => req.access_token).first || req.invalid_token!
+            user.to_mac_token.verify!(req)
+            user
+          end
           use ApiUmbrella::Gatekeeper::Rack::Authenticate
           use ApiUmbrella::Gatekeeper::Rack::Authorize
           use ApiUmbrella::Gatekeeper::Rack::Throttle::Daily,

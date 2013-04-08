@@ -15,7 +15,7 @@ describe ApiUmbrella::Gatekeeper::Server do
     end
 
     it "creates a log entry for a successful request" do
-      make_request(:get, "/hello?api_key=#{@api_user.api_key}")
+      make_request(:get, "/hello?access_token=#{@api_user.api_key}")
 
       log = ApiUmbrella::ApiRequestLog.last
       log.should_not eq(nil)
@@ -27,12 +27,12 @@ describe ApiUmbrella::Gatekeeper::Server do
 
       log = ApiUmbrella::ApiRequestLog.last
       log.should_not eq(nil)
-      log.response_status.should eq(403)
+      log.response_status.should eq(400)
     end
 
     describe "api key" do
       it "logs the api key for a successful request" do
-        make_request(:get, "/hello?api_key=#{@api_user.api_key}")
+        make_request(:get, "/hello?access_token=#{@api_user.api_key}")
 
         log = ApiUmbrella::ApiRequestLog.last
         log.api_key.should eq(@api_user.api_key)
@@ -48,23 +48,23 @@ describe ApiUmbrella::Gatekeeper::Server do
 
     describe "full path" do
       it "logs the path and query string" do
-        make_request(:get, "/hello?api_key=#{@api_user.api_key}&hello=goodbye")
+        make_request(:get, "/hello?access_token=#{@api_user.api_key}&hello=goodbye")
 
         log = ApiUmbrella::ApiRequestLog.last
-        log.fullpath.should eq("/hello?api_key=#{@api_user.api_key}&hello=goodbye")
+        log.fullpath.should eq("/hello?access_token=#{@api_user.api_key}&hello=goodbye")
       end
     end
 
     describe "ip address" do
       it "logs the ip address" do
-        make_request(:get, "/hello?api_key=#{@api_user.api_key}")
+        make_request(:get, "/hello?access_token=#{@api_user.api_key}")
 
         log = ApiUmbrella::ApiRequestLog.last
         log.ip_address.should eq("127.0.0.1")
       end
 
       it "logs the forwarded ip address" do
-        make_request(:get, "/hello?api_key=#{@api_user.api_key}", {
+        make_request(:get, "/hello?access_token=#{@api_user.api_key}", {
           :head => { "X-Forwarded-For" => "4.4.4.4" },
         })
 
@@ -73,7 +73,7 @@ describe ApiUmbrella::Gatekeeper::Server do
       end
 
       it "ignores forwarded ips from untrusted proxies" do
-        make_request(:get, "/hello?api_key=#{@api_user.api_key}", {
+        make_request(:get, "/hello?access_token=#{@api_user.api_key}", {
           :head => { "X-Forwarded-For" => "4.4.4.4, 3.3.3.3, 127.0.0.1" },
         })
 
@@ -84,22 +84,22 @@ describe ApiUmbrella::Gatekeeper::Server do
 
     describe "request size metrics" do
       it "measures request header size" do
-        make_request(:get, "/hello?api_key=#{@api_user.api_key}")
+        make_request(:get, "/hello?access_token=#{@api_user.api_key}")
         log1 = ApiUmbrella::ApiRequestLog.last
         log1.request_header_size.should be > 0
 
-        make_request(:get, "/hello2?api_key=#{@api_user.api_key}")
+        make_request(:get, "/hello2?access_token=#{@api_user.api_key}")
         log2 = ApiUmbrella::ApiRequestLog.last
         log2.request_header_size.should be > 0
         log2.request_header_size.should eq(log1.request_header_size + 1)
       end
 
       it "measures request body size" do
-        make_request(:post, "/hello?api_key=#{@api_user.api_key}", :body => "goodbye")
+        make_request(:post, "/hello?access_token=#{@api_user.api_key}", :body => "goodbye")
         log1 = ApiUmbrella::ApiRequestLog.last
         log1.request_body_size.should eq(7)
 
-        make_request(:post, "/hello?api_key=#{@api_user.api_key}", :body => "goodbye2")
+        make_request(:post, "/hello?access_token=#{@api_user.api_key}", :body => "goodbye2")
         log2 = ApiUmbrella::ApiRequestLog.last
         log2.request_body_size.should eq(8)
       end
@@ -107,7 +107,7 @@ describe ApiUmbrella::Gatekeeper::Server do
 
 
       it "measures total request size" do
-        make_request(:post, "/hello?api_key=#{@api_user.api_key}", :body => "goodbye")
+        make_request(:post, "/hello?access_token=#{@api_user.api_key}", :body => "goodbye")
 
         log = ApiUmbrella::ApiRequestLog.last
         log.request_total_size.should be > 0
@@ -115,20 +115,20 @@ describe ApiUmbrella::Gatekeeper::Server do
       end
 
       it "uses bytesize for measuring utf8 characters" do
-        make_request(:post, "/hello?api_key=#{@api_user.api_key}", {
+        make_request(:post, "/hello?access_token=#{@api_user.api_key}", {
           :head => { "X-Example" => "tést" },
           :body => "göödbye",
         })
 
         log = ApiUmbrella::ApiRequestLog.last
-        log.request_header_size.should eq(165)
+        log.request_header_size.should eq(170)
         log.request_body_size.should eq(9)
-        log.request_total_size.should eq(174)
+        log.request_total_size.should eq(179)
       end
 
       it "measures the request size when spread across multiple request chunks" do
         send_chunks([
-          "GET /hello?api_key=#{@api_user.api_key} HTTP/1.1#{CRLF}",
+          "GET /hello?access_token=#{@api_user.api_key} HTTP/1.1#{CRLF}",
           "Transfer-Encoding: chunked#{CRLF}",
           "Content-Type: application/x-www-form-urlencoded#{CRLF}#{CRLF}5#{CRLF}Body ",
           "#{CRLF}7#{CRLF}Message#{CRLF}",
@@ -136,9 +136,9 @@ describe ApiUmbrella::Gatekeeper::Server do
         ])
 
         log = ApiUmbrella::ApiRequestLog.last
-        log.request_header_size.should eq(126)
+        log.request_header_size.should eq(131)
         log.request_body_size.should eq(52)
-        log.request_total_size.should eq(178)
+        log.request_total_size.should eq(183)
       end
 
       context "unauthenticated requests" do
@@ -172,21 +172,21 @@ describe ApiUmbrella::Gatekeeper::Server do
 
     describe "response size metrics" do
       it "measures response header size" do
-        make_request(:get, "/hello?api_key=#{@api_user.api_key}")
+        make_request(:get, "/hello?access_token=#{@api_user.api_key}")
 
         log = ApiUmbrella::ApiRequestLog.last
         log.response_header_size.should be > 0
       end
 
       it "measures response body size" do
-        make_request(:get, "/hello?api_key=#{@api_user.api_key}")
+        make_request(:get, "/hello?access_token=#{@api_user.api_key}")
 
         log = ApiUmbrella::ApiRequestLog.last
         log.response_body_size.should eq(11)
       end
 
       it "measures total response size" do
-        make_request(:get, "/hello?api_key=#{@api_user.api_key}")
+        make_request(:get, "/hello?access_token=#{@api_user.api_key}")
 
         log = ApiUmbrella::ApiRequestLog.last
         log.response_total_size.should be > 0
@@ -194,7 +194,7 @@ describe ApiUmbrella::Gatekeeper::Server do
       end
 
       it "uses bytesize for measuring utf8 characters" do
-        make_request(:get, "/utf8?api_key=#{@api_user.api_key}")
+        make_request(:get, "/utf8?access_token=#{@api_user.api_key}")
 
         log = ApiUmbrella::ApiRequestLog.last
         log.response_header_size.should eq(263)
@@ -209,7 +209,7 @@ describe ApiUmbrella::Gatekeeper::Server do
         ApiUmbrella::Gatekeeper::ConnectionHandler.any_instance.should_receive(:on_response).at_least(3).times.and_call_original
 
         send_chunks([
-          "GET /chunked?api_key=#{@api_user.api_key} HTTP/1.1#{CRLF}#{CRLF}",
+          "GET /chunked?access_token=#{@api_user.api_key} HTTP/1.1#{CRLF}#{CRLF}",
         ])
 
         log = ApiUmbrella::ApiRequestLog.last
@@ -221,7 +221,7 @@ describe ApiUmbrella::Gatekeeper::Server do
 
     describe "response status code" do
       it "logs the status code for a successful request" do
-        make_request(:get, "/hello?api_key=#{@api_user.api_key}")
+        make_request(:get, "/hello?access_token=#{@api_user.api_key}")
 
         log = ApiUmbrella::ApiRequestLog.last
         log.response_status.should eq(200)
@@ -235,7 +235,7 @@ describe ApiUmbrella::Gatekeeper::Server do
       end
 
       it "logs the status code for an error from the backend server" do
-        make_request(:get, "/404?api_key=#{@api_user.api_key}")
+        make_request(:get, "/404?access_token=#{@api_user.api_key}")
 
         log = ApiUmbrella::ApiRequestLog.last
         log.response_status.should eq(404)
@@ -255,7 +255,7 @@ describe ApiUmbrella::Gatekeeper::Server do
       it "logs the timestamp of the when the request started, not finished" do
         start_time = Time.now
         send_chunks([
-          "GET /hello?api_key=#{@api_user.api_key} HTTP/1.1#{CRLF}",
+          "GET /hello?access_token=#{@api_user.api_key} HTTP/1.1#{CRLF}",
           "Transfer-Encoding: chunked#{CRLF}",
           "Content-Type: application/x-www-form-urlencoded#{CRLF}#{CRLF}5#{CRLF}Body ",
           "#{CRLF}7#{CRLF}Message#{CRLF}",
@@ -269,7 +269,7 @@ describe ApiUmbrella::Gatekeeper::Server do
       end
 
       it "logs timers on how long the request took" do
-        make_request(:get, "/sleep?api_key=#{@api_user.api_key}")
+        make_request(:get, "/sleep?access_token=#{@api_user.api_key}")
 
         log = ApiUmbrella::ApiRequestLog.last
 
@@ -285,7 +285,7 @@ describe ApiUmbrella::Gatekeeper::Server do
       end
 
       it "logs timers on request timeouts" do
-        make_request(:get, "/sleep_timeout?api_key=#{@api_user.api_key}")
+        make_request(:get, "/sleep_timeout?access_token=#{@api_user.api_key}")
 
         log = ApiUmbrella::ApiRequestLog.last
 
@@ -312,7 +312,7 @@ describe ApiUmbrella::Gatekeeper::Server do
 
     describe "abort logging" do
       it "doesn't log the request or response as aborted under normal circumstances" do
-        make_request(:get, "/hello?api_key=#{@api_user.api_key}")
+        make_request(:get, "/hello?access_token=#{@api_user.api_key}")
 
         log = ApiUmbrella::ApiRequestLog.last
         log.attributes.key?("request_aborted").should be_false
@@ -329,7 +329,7 @@ describe ApiUmbrella::Gatekeeper::Server do
       end
 
       it "logs the response as aborted on request timeouts" do
-        make_request(:get, "/sleep_timeout?api_key=#{@api_user.api_key}")
+        make_request(:get, "/sleep_timeout?access_token=#{@api_user.api_key}")
 
         log = ApiUmbrella::ApiRequestLog.last
         log.attributes.key?("request_aborted").should be_false
@@ -340,7 +340,7 @@ describe ApiUmbrella::Gatekeeper::Server do
 
     describe "request headers" do
       it "logs the request headers as a hash" do
-        make_request(:get, "/hello?api_key=#{@api_user.api_key}", {
+        make_request(:get, "/hello?access_token=#{@api_user.api_key}", {
           :head => { "X-Forwarded-For" => "4.4.4.4" },
         })
 
@@ -356,7 +356,7 @@ describe ApiUmbrella::Gatekeeper::Server do
 
     describe "response headers" do
       it "logs the response headers as a hash" do
-        make_request(:get, "/hello?api_key=#{@api_user.api_key}")
+        make_request(:get, "/hello?access_token=#{@api_user.api_key}")
 
         log = ApiUmbrella::ApiRequestLog.last
 

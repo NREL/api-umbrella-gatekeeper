@@ -29,6 +29,7 @@ Gem::Specification.new do |gem|
 
   # Rack for contructing our proxy using modularized middlewares.
   gem.add_dependency("rack")
+  gem.add_dependency("rack-oauth2")
 
   # For dealing with the YAML config file.
   gem.add_dependency("settingslogic")

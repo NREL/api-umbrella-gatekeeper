@@ -9,6 +9,9 @@ module ApiUmbrella
       # developer.nrel.gov main_site project, we have a somewhat funky dependency
       # on bootstrapping Rails from the main_site's directory.
       class Authenticate
+        #include ::Rack::OAuth2::Server::Token::ErrorMethods
+        include ::Rack::OAuth2::Server::Resource::Bearer::ErrorMethods
+
         def initialize(app, options = {})
           @app = app
           @options = options
@@ -18,6 +21,24 @@ module ApiUmbrella
         def call(env)
           request = ::Rack::Request.new(env)
 
+          rack_response = []
+
+          user = request.env[::Rack::OAuth2::Server::Resource::ACCESS_TOKEN]
+          if(user)
+            env["rack.api_user"] = user
+            rack_response = @app.call(env)
+          else
+            if(ApiUmbrella::Gatekeeper.config["authenticate"]["legacy_api_keys"])
+              rack_response = legacy_api_keys_authenticate(env, request)
+            else
+              invalid_request!
+            end
+          end
+
+          rack_response
+        end
+
+        def legacy_api_keys_authenticate(env, request)
           # By default, the API key should be passed in through the "api_key" GET
           # parameter.
           env["rack.api_key"] = request.GET["api_key"]

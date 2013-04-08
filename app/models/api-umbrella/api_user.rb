@@ -8,6 +8,7 @@ module ApiUmbrella
     store_in :collection => "api_users"
 
     field :api_key
+    field :shared_secret
     field :first_name
     field :last_name
     field :email
@@ -61,6 +62,10 @@ module ApiUmbrella
     attr_accessible :first_name, :last_name, :email, :website, :use_description,
       :terms_and_conditions
 
+    def self.active
+      where(:disabled_at => nil)
+    end
+
     # has_role? simply needs to return true or false whether a user has a role or not.  
     # It may be a good idea to have "admin" roles return true always
     def has_role?(role_in_question)
@@ -98,6 +103,15 @@ module ApiUmbrella
       end
 
       hash
+    end
+
+    def to_mac_token
+      mac_token = Rack::OAuth2::AccessToken::MAC.new({
+        :access_token  => self.api_key,
+        :mac_key       => self.shared_secret,
+        :mac_algorithm => "hmac-sha-256",
+        :expires_in    => 1.minute,
+      })
     end
 
     private

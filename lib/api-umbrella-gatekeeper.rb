@@ -3,6 +3,7 @@ require "em-proxy"
 require "erb"
 require "http/parser"
 require "rack"
+require "rack/oauth2"
 require "rack/throttle"
 require "redis"
 require "settingslogic"
@@ -15,6 +16,9 @@ require "api-umbrella/api_user"
 module ApiUmbrella
   module Gatekeeper
     DEFAULT_CONFIG = {
+      "authenticate" => {
+        "legacy_api_keys" => false,
+      },
       "throttle" => {
         "http_code" => 429,
         "hourly_max" => 1000,

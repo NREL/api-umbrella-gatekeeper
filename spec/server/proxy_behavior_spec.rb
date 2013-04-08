@@ -14,7 +14,7 @@ describe ApiUmbrella::Gatekeeper::Server do
 
     it "correctly sends the request body when it's split between chunks" do
       send_chunks([
-        "POST /echo?api_key=#{@api_user.api_key} HTTP/1.1#{CRLF}",
+        "POST /echo?access_token=#{@api_user.api_key} HTTP/1.1#{CRLF}",
         "Content-Length: 12#{CRLF}#{CRLF}Hello",
         "Goodbye",
       ])
