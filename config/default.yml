@@ -7,6 +7,9 @@ apiUmbrella:
     hosts:
       - host: 127.0.0.1
         port: 9200
+  beanstalkd:
+    host: 127.0.0.1
+    port: 11300
   accountSignupUri: "http://example.com/"
   contactUri: "http://example.com/contact"
   trustedProxies:
@@ -49,5 +52,6 @@ apiUmbrella:
         responseHeaders: true
   logProcessor:
     workers: 1
+    fallbackTimeout: 30000,
   routerLogListener:
     workers: 1

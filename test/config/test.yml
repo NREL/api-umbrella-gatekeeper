@@ -13,6 +13,11 @@ apiUmbrella:
       url_matches:
         - frontend_prefix: /
           backend_prefix: /
+  logProcessor:
+    # Shorten the log processing timeout, since there's only the single
+    # gatekeeper part of the combined logs present in the test environment
+    # right now (the nginx log files aren't present).
+    fallbackTimeout: 1,
 convoy:
   keys:
     prefix: "cv:"
