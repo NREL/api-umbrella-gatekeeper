@@ -35,9 +35,9 @@
     }
   },
   {
-    "id": "api-umbrella-log-template",
+    "id": "api-umbrella-log-v1-template",
     "template": {
-      "template": "api-umbrella-logs-*",
+      "template": "api-umbrella-logs-v1-*",
       "settings": {
         "index": {
           "number_of_shards": 3
@@ -104,12 +104,39 @@
               "type": "string",
               "index": "not_analyzed"
             },
-            "request_path": {
+            "request_path_hierarchy": {
               "type": "string",
               "analyzer": "path_hierarchy_lowercase"
             },
+            "request_size": {
+              "type": "integer"
+            },
             "response_status": {
               "type": "short"
+            },
+            "response_age": {
+              "type": "integer"
+            },
+            "response_content_length": {
+              "type": "integer"
+            },
+            "response_size": {
+              "type": "integer"
+            },
+            "response_time": {
+              "type": "integer"
+            },
+            "backend_response_time": {
+              "type": "integer"
+            },
+            "proxy_overhead": {
+              "type": "integer"
+            },
+            "internal_response_time": {
+              "type": "float"
+            },
+            "internal_gatekeeper_time": {
+              "type": "float"
             },
             "request_ip_location": {
               "type": "geo_point",
