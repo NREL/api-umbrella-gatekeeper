@@ -163,6 +163,21 @@ describe('config reloader', function() {
             ];
 
             break;
+          case 'once-valid.akamai.com':
+            message.answer = [
+              { name: 'foo.akamai.com',
+                type: 5,
+                class: 1,
+                ttl: 300,
+                data: 'foo.akamai.com.edgekey.net' },
+              { name: 'foo.akamai.com.edgekey.net',
+                type: 5,
+                class: 1,
+                ttl: 657,
+                data: 'e5246.dscb.akamaiedge.net' },
+            ];
+
+            break;
           case 'localhost':
           case 'once-valid.blah':
           case 'foo.blah':
@@ -185,6 +200,7 @@ describe('config reloader', function() {
             callback(null, '127.0.0.1');
             break;
           case 'once-valid.blah':
+          case 'once-valid.akamai.com':
           case 'foo.blah':
             callback('Not found');
             break;
@@ -209,14 +225,21 @@ describe('config reloader', function() {
           redisClient.set('router_active_ip:www.akamai.com', '10.0.0.1', callback);
         },
         function(callback) {
-          var key = 'router_seen_ips:www.akamai.com:' + moment().subtract(3, 'hours').format(DnsResolver.RECENT_IP_BUCKET_TIME_FORMAT);
+          redisClient.set('router_active_ip:once-valid.akamai.com', '2.3.4.5', callback);
+        },
+        function(callback) {
+          var key = 'router_seen_ips:once-valid.akamai.com:' + moment().subtract(0, 'hours').format(DnsResolver.RECENT_IP_BUCKET_TIME_FORMAT);
+          redisClient.sadd(key, ['3.4.5.6'], callback);
+        },
+        function(callback) {
+          var key = 'router_seen_ips:www.akamai.com:' + moment().subtract(1, 'hours').format(DnsResolver.RECENT_IP_BUCKET_TIME_FORMAT);
           redisClient.sadd(key, ['10.0.0.1'], callback);
         },
         function(callback) {
           redisClient.set('router_active_ip:blogs.akamai.com', '10.0.0.1', callback);
         },
         function(callback) {
-          var key = 'router_seen_ips:blogs.akamai.com:' + moment().subtract(4, 'hours').format(DnsResolver.RECENT_IP_BUCKET_TIME_FORMAT);
+          var key = 'router_seen_ips:blogs.akamai.com:' + moment().subtract(2, 'hours').format(DnsResolver.RECENT_IP_BUCKET_TIME_FORMAT);
           redisClient.sadd(key, ['10.0.0.1'], callback);
         },
       ], done);
@@ -256,6 +279,15 @@ describe('config reloader', function() {
           servers: [
             {
               host: 'once-valid.blah',
+              port: 80,
+            },
+          ],
+        },
+        {
+          _id: 'once-valid-use-recent-api',
+          servers: [
+            {
+              host: 'once-valid.akamai.com',
               port: 80,
             },
           ],
@@ -420,14 +452,21 @@ describe('config reloader', function() {
       upstreamIp.should.eql('1.2.3.4');
     });
 
-    it('keeps using the same address if it has been seen in the past 4 wall hours', function() {
+    it('maintains previously cached addresses for domains that have recently seen ips, but do not currently resolve', function() {
+      var block = this.nginxConfigContents.match(/upstream api_umbrella_once-valid-use-recent-api_backend {[^}]*}/)[0];
+      var upstreamIp = block.match(/server (.+):80;/)[1];
+
+      upstreamIp.should.eql('2.3.4.5');
+    });
+
+    it('keeps using the same address if it has been seen in the past 2 wall hours', function() {
       var block = this.nginxConfigContents.match(/upstream api_umbrella_use-recent-cname-api_backend {[^}]*}/)[0];
       var ip = block.match(/server (.+):80;/)[1];
 
       ip.should.eql('10.0.0.1');
     });
 
-    it('stops using recently seen address more than 4 wall hours old', function() {
+    it('stops using recently seen address more than 2 wall hours old', function() {
       var block = this.nginxConfigContents.match(/upstream api_umbrella_use-recent-expired-api_backend {[^}]*}/)[0];
       var ip = block.match(/server (.+):80;/)[1];
 
