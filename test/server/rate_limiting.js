@@ -878,6 +878,28 @@ describe('ApiUmbrellaGatekeper', function() {
 
     describe('user specific limits', function() {
       shared.runServer({
+        apis: [
+          {
+            frontend_host: 'localhost',
+            backend_host: 'example.com:8080',
+            url_matches: [
+              {
+                frontend_prefix: '/info/port',
+                backend_prefix: '/info/port'
+              }
+            ]
+          },
+          {
+            frontend_host: 'localhost',
+            backend_host: 'example.com',
+            url_matches: [
+              {
+                frontend_prefix: '/',
+                backend_prefix: '/'
+              }
+            ]
+          }
+        ],
         apiSettings: {
           rate_limits: [
             {
@@ -930,6 +952,7 @@ describe('ApiUmbrellaGatekeper', function() {
                   limit: 10,
                   distributed: true,
                   response_headers: true,
+                  backend_host: 'example.com',
                 }
               ]
             }
@@ -957,6 +980,9 @@ describe('ApiUmbrellaGatekeper', function() {
             }.bind(this));
           }.bind(this));
         });
+
+        // Different backend host has different limits
+        itBehavesLikeApiKeyRateLimits('/info/port', 5);
       });
     });
   });
